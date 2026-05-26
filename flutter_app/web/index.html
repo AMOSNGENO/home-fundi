@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="HOMEFUNDI repair booking, payment, tracking, and chat.">
+  <meta name="theme-color" content="#149447">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="HOMEFUNDI">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>HOMEFUNDI</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html,
+    body {
+      background: #f7fbf4;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      color: #083f2b;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body::before {
+      align-items: center;
+      border: 3px solid #083f2b;
+      box-shadow: 5px 5px 0 #149447;
+      color: #e5362d;
+      content: "HOMEFUNDI";
+      display: flex;
+      font-weight: 900;
+      height: 54px;
+      justify-content: center;
+      left: 50%;
+      letter-spacing: 1px;
+      position: fixed;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 190px;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

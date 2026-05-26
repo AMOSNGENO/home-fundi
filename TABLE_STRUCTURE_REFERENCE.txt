@@ -1,0 +1,365 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║          HOMEFUNDI MOBILE APP - DATABASE SCHEMA STRUCTURE REFERENCE            ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+ CORE IDENTITY & USER MANAGEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: users
+├─ id (BIGINT UNSIGNED, PRIMARY KEY, AUTO_INCREMENT)
+├─ name (VARCHAR 255)
+├─ email (VARCHAR 255, UNIQUE)
+├─ phone (VARCHAR 20, UNIQUE)
+├─ password_hash (VARCHAR 255)
+├─ role (ENUM: customer|technician|admin)
+├─ profile_image_url (VARCHAR 500)
+├─ location_latitude/longitude (DECIMAL 10,8 | 11,8)
+├─ address, city, state, postal_code, country
+├─ is_active, email_verified, phone_verified (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ deleted_at (TIMESTAMP NULL - soft delete)
+
+TABLE: technician_profiles
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ user_id (BIGINT UNSIGNED, UNIQUE FK → users.id)
+├─ bio (TEXT)
+├─ years_of_experience (INT)
+├─ average_rating, total_reviews (DECIMAL 3,2 | INT)
+├─ jobs_completed (INT)
+├─ is_available (BOOLEAN)
+├─ availability_status (ENUM: available|busy|offline|on_break)
+├─ current_location_latitude/longitude (DECIMAL)
+├─ service_radius_km (INT)
+├─ aadhar_number, aadhar_verified (VARCHAR | BOOLEAN)
+├─ bank_account_number, bank_verified (VARCHAR | BOOLEAN)
+├─ gst_number (VARCHAR)
+├─ identity_verified, background_check_completed (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_average_rating, idx_jobs_completed, idx_is_available
+
+═══════════════════════════════════════════════════════════════════════════════
+ SERVICE MANAGEMENT & TECHNICIAN EXPERTISE
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: services
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ name (VARCHAR 255)
+├─ description (TEXT)
+├─ category (VARCHAR 100)
+├─ base_price (DECIMAL 10,2)
+├─ is_active (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_category, idx_is_active
+
+TABLE: technician_services (Many-to-Many)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ technician_id (BIGINT UNSIGNED FK → technician_profiles.user_id)
+├─ service_id (BIGINT UNSIGNED FK → services.id)
+├─ price (DECIMAL 10,2)
+├─ expertise_level (ENUM: beginner|intermediate|expert)
+├─ is_available (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+├─ UNIQUE: (technician_id, service_id)
+└─ INDEXES: idx_technician_id, idx_service_id
+
+TABLE: technician_availability
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ technician_id (BIGINT UNSIGNED FK → technician_profiles.user_id)
+├─ day_of_week (ENUM: Monday|Tuesday|...|Sunday)
+├─ start_time, end_time (TIME)
+├─ is_available (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+├─ UNIQUE: (technician_id, day_of_week)
+└─ INDEXES: idx_technician_id, idx_availability_tech_day
+
+═══════════════════════════════════════════════════════════════════════════════
+ BOOKING & SERVICE FULFILLMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: bookings
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ booking_reference (VARCHAR 50, UNIQUE)
+├─ customer_id (BIGINT UNSIGNED FK → users.id)
+├─ technician_id (BIGINT UNSIGNED NULL FK → technician_profiles.user_id)
+├─ service_id (BIGINT UNSIGNED FK → services.id)
+├─ status (ENUM: pending|accepted|in_progress|completed|cancelled|no_show)
+├─ Service Details:
+│  ├─ service_date (DATE)
+│  ├─ service_start_time, service_end_time (TIME)
+│  ├─ estimated_duration_minutes (INT)
+│  ├─ service_address (VARCHAR 500)
+│  └─ customer_location_latitude/longitude (DECIMAL)
+├─ Pricing:
+│  ├─ base_price, tax_amount, total_price (DECIMAL 10,2)
+│  └─ discount_amount (DECIMAL 10,2)
+├─ description (TEXT)
+├─ Cancellation:
+│  ├─ cancellation_reason (TEXT)
+│  ├─ cancelled_by (ENUM: customer|technician|system)
+│  └─ cancelled_at (TIMESTAMP NULL)
+├─ Tracking:
+│  ├─ otp_code (VARCHAR 6)
+│  └─ otp_verified (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_customer_id, idx_technician_id, idx_status, idx_service_date, 
+            idx_booking_reference, idx_booking_status_date, 
+            idx_booking_customer_date, idx_booking_technician_status
+
+TABLE: booking_timeline (Immutable Audit Log)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ booking_id (BIGINT UNSIGNED FK → bookings.id)
+├─ previous_status (ENUM: all statuses | NULL)
+├─ new_status (ENUM: all statuses)
+├─ changed_by (BIGINT UNSIGNED NULL FK → users.id)
+├─ notes (TEXT)
+├─ created_at (TIMESTAMP)
+└─ INDEXES: idx_booking_id, idx_created_at
+
+═══════════════════════════════════════════════════════════════════════════════
+ CHAT & REAL-TIME MESSAGING
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: conversations (Chat Threads)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ booking_id (BIGINT UNSIGNED NULL FK → bookings.id)
+├─ participant_1_id (BIGINT UNSIGNED FK → users.id)
+├─ participant_2_id (BIGINT UNSIGNED FK → users.id)
+├─ last_message_id (BIGINT UNSIGNED NULL FK → messages.id)
+├─ last_message_time (TIMESTAMP NULL)
+├─ last_message_preview (VARCHAR 255)
+├─ is_active (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+├─ UNIQUE: (participant_1_id, participant_2_id)
+└─ INDEXES: idx_participant_1_id, idx_participant_2_id, idx_updated_at
+
+TABLE: messages (Chat Messages)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ conversation_id (BIGINT UNSIGNED FK → conversations.id)
+├─ sender_id (BIGINT UNSIGNED FK → users.id)
+├─ receiver_id (BIGINT UNSIGNED FK → users.id)
+├─ message_text (LONGTEXT)
+├─ message_type (ENUM: text|image|file|location|quote)
+├─ media_url (VARCHAR 500)
+├─ is_read (BOOLEAN DEFAULT FALSE)
+├─ read_at (TIMESTAMP NULL)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_conversation_id, idx_sender_id, idx_is_read, idx_created_at,
+            idx_message_conversation_read, idx_message_sender_created
+
+═══════════════════════════════════════════════════════════════════════════════
+ PAYMENTS, WALLETS & TRANSACTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: transactions (Complete Payment History)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ transaction_reference (VARCHAR 50, UNIQUE)
+├─ booking_id (BIGINT UNSIGNED NULL FK → bookings.id)
+├─ user_id (BIGINT UNSIGNED FK → users.id)
+├─ transaction_type (ENUM: payment|refund|wallet_credit|wallet_debit|earning)
+├─ payment_method (ENUM: credit_card|debit_card|upi|net_banking|wallet|cash)
+├─ amount (DECIMAL 10,2)
+├─ currency (VARCHAR 3, DEFAULT 'INR')
+├─ status (ENUM: pending|completed|failed|refunded)
+├─ payment_gateway_response (LONGTEXT)
+├─ gateway_transaction_id (VARCHAR 100)
+├─ description (TEXT)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_user_id, idx_booking_id, idx_status, idx_transaction_type, 
+            idx_created_at, idx_transaction_user_status, idx_transaction_type_date
+
+TABLE: wallets (User Account Balance)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ user_id (BIGINT UNSIGNED, UNIQUE FK → users.id)
+├─ balance (DECIMAL 10,2 DEFAULT 0.00)
+├─ currency (VARCHAR 3 DEFAULT 'INR')
+├─ last_transaction_id (BIGINT UNSIGNED NULL FK → transactions.id)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_user_id
+
+═══════════════════════════════════════════════════════════════════════════════
+ PROMOTIONS & DISCOUNTS
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: promotions
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ code (VARCHAR 50, UNIQUE)
+├─ description (TEXT)
+├─ discount_type (ENUM: percentage|fixed_amount)
+├─ discount_value (DECIMAL 10,2)
+├─ max_uses (INT)
+├─ current_uses (INT DEFAULT 0)
+├─ max_uses_per_user (INT DEFAULT 1)
+├─ min_booking_amount (DECIMAL 10,2)
+├─ applicable_services (JSON)
+├─ valid_from, valid_until (DATETIME)
+├─ is_active (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_code, idx_is_active, idx_valid_from, idx_valid_until
+
+TABLE: promo_usage (Coupon Audit Trail)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ promotion_id (BIGINT UNSIGNED FK → promotions.id)
+├─ user_id (BIGINT UNSIGNED FK → users.id)
+├─ booking_id (BIGINT UNSIGNED FK → bookings.id)
+├─ discount_amount (DECIMAL 10,2)
+├─ used_at (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+└─ INDEXES: idx_promotion_id, idx_user_id, idx_used_at
+
+═══════════════════════════════════════════════════════════════════════════════
+ REVIEWS, RATINGS & FEEDBACK
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: reviews
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ booking_id (BIGINT UNSIGNED, UNIQUE FK → bookings.id)
+├─ reviewer_id (BIGINT UNSIGNED FK → users.id)
+├─ reviewee_id (BIGINT UNSIGNED FK → users.id)
+├─ rating (DECIMAL 3,2)
+├─ title (VARCHAR 255)
+├─ comment (TEXT)
+├─ cleanliness_rating (INT)
+├─ professionalism_rating (INT)
+├─ punctuality_rating (INT)
+├─ is_anonymous (BOOLEAN)
+├─ is_helpful (BOOLEAN)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_booking_id, idx_reviewer_id, idx_reviewee_id, idx_rating, 
+            idx_created_at
+
+TABLE: rating_breakdown (Analytics Cache)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ technician_id (BIGINT UNSIGNED, UNIQUE FK → technician_profiles.user_id)
+├─ one_star_count through five_star_count (INT)
+├─ total_ratings (INT)
+├─ average_rating (DECIMAL 3,2)
+├─ updated_at (TIMESTAMP ON UPDATE)
+└─ INDEXES: idx_technician_id
+
+═══════════════════════════════════════════════════════════════════════════════
+ SUPPORT & CUSTOMER SERVICE
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: support_tickets
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ ticket_reference (VARCHAR 50, UNIQUE)
+├─ user_id (BIGINT UNSIGNED FK → users.id)
+├─ booking_id (BIGINT UNSIGNED NULL FK → bookings.id)
+├─ subject (VARCHAR 255)
+├─ description (TEXT)
+├─ category (VARCHAR 100)
+├─ priority (ENUM: low|medium|high|urgent)
+├─ status (ENUM: open|in_progress|resolved|closed)
+├─ assigned_to (BIGINT UNSIGNED NULL FK → users.id)
+├─ resolution_notes (TEXT)
+├─ created_at, resolved_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_user_id, idx_status, idx_priority, idx_assigned_to, 
+            idx_created_at
+
+═══════════════════════════════════════════════════════════════════════════════
+ ADMIN & AUDIT LOGS
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: admin_logs (Compliance Audit Trail)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ admin_id (BIGINT UNSIGNED FK → users.id)
+├─ action (VARCHAR 100)
+├─ entity_type (VARCHAR 100)
+├─ entity_id (BIGINT UNSIGNED)
+├─ description (TEXT)
+├─ old_values (LONGTEXT)
+├─ new_values (LONGTEXT)
+├─ ip_address (VARCHAR 45)
+├─ user_agent (VARCHAR 500)
+├─ created_at (TIMESTAMP - IMMUTABLE)
+└─ INDEXES: idx_admin_id, idx_action, idx_entity_type, idx_created_at
+
+═══════════════════════════════════════════════════════════════════════════════
+ NOTIFICATIONS & PUSH
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: notifications
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ user_id (BIGINT UNSIGNED FK → users.id)
+├─ title (VARCHAR 255)
+├─ description (TEXT)
+├─ notification_type (VARCHAR 100)
+├─ related_entity_type (VARCHAR 100)
+├─ related_entity_id (BIGINT UNSIGNED)
+├─ is_read (BOOLEAN DEFAULT FALSE)
+├─ read_at (TIMESTAMP NULL)
+├─ action_url (VARCHAR 500)
+├─ created_at (TIMESTAMP)
+└─ INDEXES: idx_user_id, idx_is_read, idx_created_at
+
+TABLE: device_tokens (Push Notification Infrastructure)
+├─ id (BIGINT UNSIGNED, PRIMARY KEY)
+├─ user_id (BIGINT UNSIGNED FK → users.id)
+├─ device_token (VARCHAR 500, UNIQUE)
+├─ device_type (ENUM: ios|android|web)
+├─ device_name (VARCHAR 255)
+├─ app_version (VARCHAR 50)
+├─ os_version (VARCHAR 50)
+├─ is_active (BOOLEAN DEFAULT TRUE)
+├─ last_used_at (TIMESTAMP NULL)
+├─ created_at, updated_at (TIMESTAMP)
+└─ INDEXES: idx_user_id, idx_device_type
+
+═══════════════════════════════════════════════════════════════════════════════
+ STATISTICS SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+Total Tables:       19
+├─ Core/Identity:   2 (users, technician_profiles)
+├─ Services:        3 (services, technician_services, technician_availability)
+├─ Bookings:        4 (bookings, booking_timeline, reviews, support_tickets)
+├─ Messaging:       2 (conversations, messages)
+├─ Payments:        3 (transactions, wallets, promo_usage)
+├─ Promotions:      1 (promotions)
+├─ Admin:           1 (admin_logs)
+└─ Notifications:   3 (notifications, device_tokens, rating_breakdown)
+
+Total Indexes:      40+ (including composite and optimization indexes)
+Foreign Keys:       30+
+UNIQUE Constraints: 10+
+Soft Deletes:       users.deleted_at
+Cascade Deletes:    technician_profiles, messages, promo_usage
+Set Null Deletes:   bookings.technician_id, support_tickets.assigned_to
+
+═══════════════════════════════════════════════════════════════════════════════
+ KEY PERFORMANCE OPTIMIZATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ Composite indexes on (FK, filter_column) pairs
+✓ Denormalized fields (ratings, wallet balance) for fast lookups
+✓ BIGINT UNSIGNED for scalability to 18+ quintillion records
+✓ DECIMAL precision for financial accuracy
+✓ GPS coordinates at 8 decimal places (~1.1mm precision)
+✓ Indexed soft deletes for compliance
+✓ Strategy for temporal data partitioning (date-based)
+
+═══════════════════════════════════════════════════════════════════════════════
+ FILES CREATED
+═══════════════════════════════════════════════════════════════════════════════
+
+1. 2024_initial_schema.sql          - Complete schema with DDL statements
+2. schema_documentation.md          - Detailed design documentation
+3. SCHEMA_SUMMARY.md               - Quick reference and deployment guide
+4. TABLE_STRUCTURE_REFERENCE.txt   - This visual reference document
+
+═══════════════════════════════════════════════════════════════════════════════
+ DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Review 2024_initial_schema.sql
+□ Review schema_documentation.md for design rationale
+□ Execute: mysql -u root -p database_name < 2024_initial_schema.sql
+□ Verify: SHOW TABLES; (should show 19 tables)
+□ Test constraints with sample INSERT statements
+□ Configure automated backups
+□ Set up monitoring and query performance alerts
+□ Review security settings (PASSWORD HASHING, ENCRYPTION)
+□ Plan table partitioning strategy for scale
+□ Document any customizations
+
+═══════════════════════════════════════════════════════════════════════════════

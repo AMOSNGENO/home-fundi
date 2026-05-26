@@ -1,0 +1,13 @@
+{
+  "name": "homefundi-local-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local HOMEFUNDI API and datastore for the Flutter app.",
+  "scripts": {
+    "migrate": "node scripts/migrate.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
